@@ -1,0 +1,134 @@
+---
+title: "eqPlotsC5"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{A Package for Plotting NOAA Earthquake data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# A Package for Cleaning and Plotting NOAA Earthquake data
+
+This package is an assignment of Coursera course 'Mastering Software Development in R Capstone', and has functions for cleaning and plotting information from earthquakes. Data is received from NOAA Significant Earthquake Database, provided by National Centers for Environmental Information (NCEI). 
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  fig.width=7.3, fig.height=4)
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, message = FALSE}
+library(eqPlotsC5)
+library(dplyr)
+library(ggplot2)
+library(grid)
+library(lubridate)
+```
+
+```{r load-example-data, include=FALSE}
+system.file("extdata", "signif.txt",
+            package = "eqPlotsC5")
+
+```
+
+## Functions
+
+Package has functions for NOAA earthquakes dataset cleaning and plotting:
+The goal of this package is to present functions that can be used in conjunction with the ggplot2 and eq_map packages to visualize some of the information in the NOAA earthquakes dataset. Data needs to be cleaned first with `eq_clean_data()`. Functions `geom_timeline()` and `geom_timeline_label()` are build based on ggplot2 and they visualize the times at which earthquakes occur within certain countries. Functions `eq_map()` and `eq_create_label()` are based on eg_map package and they draw maps with earthquakes. 
+
+* Earthquake data cleaning. 
+  * `eq_clean_data()`: cleans data and adds DATE variable for earthquake dates.
+  * `eq_location_clean()`: cleans location name in dataset. Used inside `eq_clean_data()`.
+
+* Timeline plots are geoms that can be used in conjunction with the ggplot2 package to visualize information about earthquakes. In addition to showing the dates on which the earthquakes occur, they can also show the magnitudes (i.e. Richter scale value) and the number of deaths associated with each earthquake. 
+  * `geom_timeline()`: plots earthquakes in the time period provided in data.    
+  * `geom_timeline_label()`: insert labels to timeline plots.   
+
+* Leaflet mapping
+  * `eq_map()`: Creates an interactive map with earthquakes. Annotation column name can be selected from data, e.g DATE.
+  * `eq_create_label()` : adds label with location, magnitude and number of deaths.
+ 
+
+## Data cleaning
+Data cleaning function `eq_clean_data()` returns earthquake data with new DATE variable, formatted from variables YEAR, MONTH and DAY. It also converts numeric the key variables used by package functions.
+
+```{r, iclude = FALSE, warning = FALSE, message=FALSE}
+readr::read_delim("signif.txt", delim = "\t") %>%
+  eq_clean_data() %>%
+  select(LOCATION_NAME, DATE, YEAR, MONTH, DAY)  %>%
+  head()
+```
+
+
+Location name cleaning function `eq_location_clean()` is used inside `eq_clean_data()`, but it can be used also separately. Function removes the country name from locaton name and set title cases for names. Locations names before cleaning...
+```{r, iclude = FALSE, warning = FALSE, message=FALSE}
+readr::read_delim("signif.txt", delim = "\t") %>%
+  filter(COUNTRY == "GREECE") %>%
+  select(LOCATION_NAME) %>% head()
+```
+
+... and after
+```{r, iclude = FALSE, warning = FALSE, message=FALSE}
+readr::read_delim("signif.txt", delim = "\t") %>%
+  eq_location_clean() %>%
+  filter(COUNTRY == "GREECE") %>%
+  select(LOCATION_NAME) %>% head()
+```
+
+## Timeline plots
+Function `geom_timeline()` returns a plot with point in each earthquake in selected countries and time periods.
+```{r, iclude = FALSE, warning = FALSE, message=FALSE}
+readr::read_delim("signif.txt", delim = "\t") %>%
+  eq_clean_data() %>%
+  dplyr::filter((COUNTRY == "USA" ) & (lubridate::year(DATE) >= 2000 &
+                                         lubridate::year(DATE) <= 2020)) %>%
+  ggplot() +
+  theme_eq + ggplot2::labs(size = "Richter scale value", fill = "# deaths") +
+  geom_timeline( aes(x = DATE, size = EQ_PRIMARY, fill = DEATHS))
+```
+
+## Add label to timeline plot
+Function `geom_timeline_label()` adds labels to timeline geom, label can be selected among the variable names in dataset. Labels of earthquakes with biggest magnitude are plotted, count can be set in n_max argument, default is fife biggest per group.
+
+```{r, iclude = FALSE, warning = FALSE, message=FALSE}
+readr::read_delim("signif.txt", delim = "\t") %>%
+  eq_clean_data() %>%
+  dplyr::filter((COUNTRY == "USA" | COUNTRY == "CHINA") & (lubridate::year(DATE) >= 2000 &
+                                                             lubridate::year(DATE) <= 2015)) %>%
+  ggplot() +
+  geom_timeline( aes(x = DATE, y = COUNTRY, size = EQ_PRIMARY, fill = DEATHS)) +
+  geom_timeline_label( aes(x = DATE, y = COUNTRY, label = LOCATION_NAME, n_max = 3, size = EQ_PRIMARY)) +
+  theme_eq
+```
+
+
+## Plot earthquake map
+Function `eq_map()` plots an interactive map with points in each earthquake in selected countries and time spans. Label can be selected among the variable names in dataset. 
+```{r, iclude = FALSE, warning = FALSE, message=FALSE}
+# Date in annotation (TOTAL_HOUSES_DESTROYED)
+readr::read_delim("signif.txt", delim = "\t") %>%
+  eq_clean_data() %>%
+  dplyr::filter(COUNTRY == "MEXICO" & lubridate::year(DATE) >= 2000) %>%
+  dplyr::mutate(popup_text = eq_create_label(.)) %>%
+  eq_map(annot_col = "DATE")
+
+```
+
+
+## Plot earthquake map with popup text
+Function `eq_create_label()` adds labels with location names, magnitude and total deaths in each earthquake to interactive map.
+```{r, iclude = FALSE, warning = FALSE, message=FALSE}
+readr::read_delim("signif.txt", delim = "\t") %>% 
+  eq_clean_data() %>% 
+  dplyr::filter(COUNTRY == "ITALY" | COUNTRY == "TURKEY" & lubridate::year(DATE) >= 2000) %>% 
+  dplyr::mutate(popup_text = eq_create_label(.)) %>% 
+  eq_map(annot_col = "popup_text")
+```
+
+
+## References
+National Geophysical Data Center / World Data Service (NGDC/WDS): NCEI/WDS Global Significant Earthquake Database. NOAA National Centers for Environmental Information. doi:10.7289/V5TD9V7K

@@ -1,0 +1,22 @@
+Package: eqPlotsC5
+Title: Plot Earthquake Timelines and Maps 
+Version: 0.0.0.9000
+Imports: dplyr, ggplot2, grid, magrittr, leaflet, readr
+Authors@R: 
+    person(given = "Pia",
+           family = "Vattulainen",
+           role = c("aut", "cre"),
+           email = "vattpia@gmail.com")
+Description: This package cleans and plots NOAA earthquake data
+             producing timeline and map plots with labels.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.0
+Suggests: 
+    knitr,
+    rmarkdown,
+    lubridate,
+    testthat
+VignetteBuilder: knitr
